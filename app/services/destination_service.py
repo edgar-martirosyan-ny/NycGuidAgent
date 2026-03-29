@@ -5,16 +5,6 @@ from app.models.destination_type import DestinationType
 from app.schemas.destination import SaveRequest
 
 
-def get_existing_by_city(city: str, db: Session) -> list[str]:
-    """Return list of destination titles already saved for a city."""
-    rows = db.execute(
-        select(Destination.title).where(
-            Destination.city == city.lower()
-        )
-    ).scalars().all()
-    return list(rows)
-
-
 def save_destination(request: SaveRequest, db: Session) -> Destination:
     dest = request.destination
     record = Destination(

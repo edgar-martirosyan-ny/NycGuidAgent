@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:4200"
     PEXELS_URL: str
     PEXELS_TOKEN: str
+    BACKEND_BASE_URL: str
+    FILE_UPLOAD_URL: str
+    OPENAI_API_KEY: str
 
     @property
     def allowed_origins_list(self) -> list[str]:

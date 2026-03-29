@@ -2,8 +2,6 @@ import json
 import logging
 import re
 import anthropic
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException
 from app.config import settings
 from app.schemas.destination import DiscoveryItem, DiscoverRequest
@@ -22,7 +20,7 @@ the expectation is that you will be returning next post popular destinations tha
   
 
 When asked to find destinations in a city:
-1. You MUST first call the `get_existing_destinations` tool to retrieve destinations already in the database.
+1. You MUST first call the `get_existing_destinations` tool with the provided city_id to retrieve destinations already saved for that city.
 2. Suggest exactly 5 NEW destinations that are NOT in the existing list.
 3. Never repeat destinations provided in the user's "already seen" list.
 4. Return ONLY a valid JSON array with no prose, no markdown fences, no extra text.
@@ -39,16 +37,16 @@ Each item in the array must have these exact fields:
 
 
 
-def run_discovery_agent(request: DiscoverRequest, db: Session) -> list[DiscoveryItem]:
+def run_discovery_agent(request: DiscoverRequest) -> list[DiscoveryItem]:
     load_more = bool(request.previous_results)
-    user_message = f"Find me tourist destinations in {request.city}."
+    user_message = f"Find me tourist destinations in {request.city_name} (city_id: {request.city_id})."
 
     if load_more:
         seen_names = [d.name for d in request.previous_results]  # type: ignore[union-attr]
         user_message += f" I have already seen these, do not repeat them: {json.dumps(seen_names)}."
 
     logger.info("=== Discovery Agent START ===")
-    logger.info("City: %s | Load More: %s", request.city, load_more)
+    logger.info("City: %s (id=%d) | Load More: %s", request.city_name, request.city_id, load_more)
     logger.info("User message → LLM: %s", user_message)
 
     messages: list = [{"role": "user", "content": user_message}]
@@ -84,14 +82,7 @@ def run_discovery_agent(request: DiscoverRequest, db: Session) -> list[Discovery
                         tool_input = dict(block.input)  # type: ignore[arg-type]
                         logger.info("LLM requested tool: '%s' | input: %s", block.name, json.dumps(tool_input))
 
-                        try:
-                            result = handle_tool_call(block.name, tool_input, db)
-                        except SQLAlchemyError as e:
-                            logger.error("DB error during tool call '%s': %s", block.name, str(e))
-                            raise HTTPException(
-                                status_code=503,
-                                detail=f"Database error while fetching existing destinations: {str(e)}",
-                            )
+                        result = handle_tool_call(block.name, tool_input)
 
                         existing = json.loads(result)
                         logger.info("Tool result → LLM: %d existing destination(s) found: %s", len(existing), existing)

@@ -4,7 +4,7 @@ import re
 import anthropic
 from fastapi import HTTPException
 from app.config import settings
-from app.schemas.destination import DetailItem
+from app.schemas.destination import DetailItem, TourGuideResponse
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,16 @@ The JSON object must have these exact fields:
 - latitude (string — precise coordinates)
 - longitude (string — precise coordinates)
 - short_description (string — 2 sentences introducing the destination as a tourism guide)
-- long_description (string — 3 to 4 paragraphs written as a tourism app audio script, vivid and engaging)"""
+- long_description (string — 3 to 4 paragraphs written as a tourism app audio script, vivid and engaging)
+- interesting_facts (array of exactly 10 strings — unique, specific, and engaging facts about the destination)"""
+
+
+TOUR_GUIDE_SYSTEM_PROMPT = """You are a professional travel writer and tourism guide.
+
+The user will provide a destination and a list of specific interesting facts they want to focus on.
+Write a vivid, engaging tour guide narrative (3 to 4 paragraphs) that weaves those specific facts into the story.
+Return ONLY a valid JSON object with a single field:
+- tour_guide (string — the generated narrative, written as a tourism app audio script)"""
 
 
 def run_detail_agent(city: str, destination_name: str) -> DetailItem:
@@ -70,6 +79,63 @@ def run_detail_agent(city: str, destination_name: str) -> DetailItem:
     detail = _parse_detail(text)
     logger.info("=== Detail Agent END === returned detail for '%s'", detail.name)
     return detail
+
+
+def run_tour_guide_agent(city: str, destination_name: str, selected_facts: list[str]) -> TourGuideResponse:
+    logger.info("=== Tour Guide Agent START === destination: '%s' | city: '%s' | facts: %d",
+                destination_name, city, len(selected_facts))
+
+    facts_text = "\n".join(f"- {f}" for f in selected_facts)
+    user_message = (
+        f"Write a tour guide for '{destination_name}' in {city} "
+        f"focused on these specific facts:\n{facts_text}"
+    )
+
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            system=TOUR_GUIDE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_message}],
+        )
+    except anthropic.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Invalid Anthropic API key.")
+    except anthropic.RateLimitError:
+        raise HTTPException(status_code=429, detail="Anthropic API rate limit reached. Please try again.")
+    except anthropic.APIConnectionError as e:
+        raise HTTPException(status_code=503, detail="Could not connect to the AI service.")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"AI service error: {e.message}")
+    except Exception as e:
+        logger.exception("Unexpected error in tour guide agent")
+        raise HTTPException(status_code=500, detail=f"Unexpected error generating tour guide: {str(e)}")
+
+    text = ""
+    for block in response.content:
+        if hasattr(block, "text"):
+            text = block.text
+            break
+
+    logger.info("Tour Guide LLM response (first 300 chars): %s", text[:300])
+
+    text = text.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    if match:
+        text = match.group(1).strip()
+    else:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            text = text[start:end + 1]
+
+    try:
+        data = json.loads(text)
+        result = TourGuideResponse(tour_guide=data["tour_guide"])
+        logger.info("=== Tour Guide Agent END ===")
+        return result
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error("Failed to parse tour guide response: %s", str(e))
+        raise HTTPException(status_code=502, detail="AI returned malformed tour guide response. Please try again.")
 
 
 def _parse_detail(text: str) -> DetailItem:

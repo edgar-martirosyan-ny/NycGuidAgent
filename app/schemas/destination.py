@@ -18,6 +18,7 @@ class DetailItem(BaseModel):
     longitude: str
     short_description: str
     long_description: str
+    interesting_facts: list[str]
 
 
 class DestinationTypeSchema(BaseModel):
@@ -31,13 +32,24 @@ class DestinationTypeSchema(BaseModel):
 # --- Request bodies ---
 
 class DiscoverRequest(BaseModel):
-    city: str
+    city_id: int
+    city_name: str
     previous_results: list[DiscoveryItem] | None = None
 
 
 class DetailRequest(BaseModel):
     city: str
     destination_name: str
+
+
+class TourGuideRequest(BaseModel):
+    city: str
+    destination_name: str
+    selected_facts: list[str]
+
+
+class TourGuideResponse(BaseModel):
+    tour_guide: str
 
 
 class SaveDestinationBody(BaseModel):

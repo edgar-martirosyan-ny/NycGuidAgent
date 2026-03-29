@@ -40,7 +40,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NycGuidAgent", lifespan=lifespan)
 
-
 @app.exception_handler(SQLAlchemyError)
 async def database_exception_handler(request: Request, exc: SQLAlchemyError):
     return JSONResponse(
@@ -72,4 +71,4 @@ app.include_router(detail.router, prefix="/api")
 app.include_router(save.router, prefix="/api")
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8070, reload=True)
