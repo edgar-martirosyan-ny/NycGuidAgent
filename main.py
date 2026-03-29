@@ -40,6 +40,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="NycGuidAgent", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.exception_handler(SQLAlchemyError)
 async def database_exception_handler(request: Request, exc: SQLAlchemyError):
     return JSONResponse(
@@ -54,15 +63,6 @@ async def generic_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": f"An unexpected server error occurred: {str(exc)}"},
     )
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 app.include_router(health.router, prefix="/api")
 app.include_router(types.router, prefix="/api")
