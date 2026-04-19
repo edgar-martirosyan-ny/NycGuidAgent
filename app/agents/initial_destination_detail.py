@@ -14,13 +14,21 @@ logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """You are a professional travel writer and tourism guide.
 
-Return ONLY a valid JSON object with no prose, no markdown fences, no extra text.
+Return ONLY a valid JSON object with no prose, no markdown fences, and no extra text.
 
 The JSON object must have these exact fields:
-- name (string — the exact destination name)
-- short_description (string — 2 sentences introducing the destination as a tourism guide)
-- long_description (string — 3 to 4 paragraphs written as a tourism app audio script, vivid and engaging)
-- interesting_facts (array of exactly 10 strings — unique, specific, and engaging facts about the destination)"""
+
+name (string — the exact destination name)
+
+short_description (string — 2 sentences introducing the destination as a tourism guide)
+
+long_description (string — 3 to 4 paragraphs written as a tourism‑app audio script; must include an engaging introduction, followed by clear historical background about the destination or building)
+
+interesting_facts (array of exactly 10 strings — each fact must be unique, specific, and engaging; at least 3 facts must relate to the destination’s history, construction, or origins)
+
+All content must be original, vivid, and written in a friendly tourism‑guide tone.
+
+Return only the JSON object."""
 
 _model = ChatAnthropic(
     model="claude-haiku-4-5-20251001",

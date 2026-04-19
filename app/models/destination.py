@@ -73,3 +73,22 @@ class DiscoverResponse(BaseModel):
 class SaveResponse(BaseModel):
     id: int
     message: str
+
+
+class AnnotationItem(BaseModel):
+    selected_text: str
+    comment: str
+    tone: str = "neutral"
+
+
+class RegenerateRequest(BaseModel):
+    city: str
+    destination_name: str
+    current_text: str
+    text_type: str = "long"
+    annotations: list[AnnotationItem] = []
+    target_length: str = "medium"
+
+
+class RegenerateResponse(BaseModel):
+    text: str
