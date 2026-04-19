@@ -5,6 +5,22 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+GEOCODE_TOOL = {
+    "name": "get_coordinates",
+    "description": "Get latitude and longitude for multiple destinations in one call. Pass all destination names at once.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "destination_names": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of destination names each concatenated with the city, e.g. ['Central Park, New York', 'Brooklyn Bridge, New York'].",
+            }
+        },
+        "required": ["destination_names"],
+    },
+}
+
 GET_EXISTING_DESTINATIONS_TOOL = {
     "name": "get_existing_destinations",
     "description": (
@@ -36,4 +52,16 @@ def handle_tool_call(tool_name: str, tool_input: dict) -> str:
         except httpx.HTTPError as e:
             logger.error("Failed to fetch existing destinations from backend: %s", str(e))
             return json.dumps([])
+
+    if tool_name == "get_coordinates":
+        destination_names = tool_input.get("destination_names", [])
+        url = f"{settings.BACKEND_BASE_URL}/api/destinations/geocode"
+        try:
+            response = httpx.post(url, json=destination_names, timeout=10.0)
+            response.raise_for_status()
+            return json.dumps(response.json())
+        except Exception as e:
+            logger.error("Geocode API call failed: %s", str(e))
+            return json.dumps([])
+
     return json.dumps([])

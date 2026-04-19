@@ -1,15 +1,13 @@
-from contextlib import asynccontextmanager
 import logging
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
+# from app.database import engine
+from app.api import health, discovery, detail
 from app.config import settings
-from app.database import engine
-from app.routers import health, types, discovery, detail, save
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,27 +16,27 @@ logging.basicConfig(
 )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Auto-add city column to destination table if it doesn't exist
-    with engine.connect() as conn:
-        result = conn.execute(
-            text(
-                "SELECT COUNT(*) FROM information_schema.COLUMNS "
-                "WHERE TABLE_SCHEMA = :db "
-                "AND TABLE_NAME = 'destination' "
-                "AND COLUMN_NAME = 'city'"
-            ),
-            {"db": settings.DB_NAME},
-        )
-        if result.scalar() == 0:
-            conn.execute(text("ALTER TABLE destination ADD COLUMN city VARCHAR(100)"))
-            conn.commit()
-            print("✓ Added 'city' column to destination table")
-    yield
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Auto-add city column to destination table if it doesn't exist
+#     with engine.connect() as conn:
+#         result = conn.execute(
+#             text(
+#                 "SELECT COUNT(*) FROM information_schema.COLUMNS "
+#                 "WHERE TABLE_SCHEMA = :db "
+#                 "AND TABLE_NAME = 'destination' "
+#                 "AND COLUMN_NAME = 'city'"
+#             ),
+#             {"db": settings.DB_NAME},
+#         )
+#         if result.scalar() == 0:
+#             conn.execute(text("ALTER TABLE destination ADD COLUMN city VARCHAR(100)"))
+#             conn.commit()
+#             print("✓ Added 'city' column to destination table")
+#     yield
 
 
-app = FastAPI(title="NycGuidAgent", lifespan=lifespan)
+app = FastAPI(title="NycGuidAgent")
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,12 +47,12 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(SQLAlchemyError)
-async def database_exception_handler(request: Request, exc: SQLAlchemyError):
-    return JSONResponse(
-        status_code=503,
-        content={"detail": f"Database error: {str(exc)}"},
-    )
+# @app.exception_handler(SQLAlchemyError)
+# async def database_exception_handler(request: Request, exc: SQLAlchemyError):
+#     return JSONResponse(
+#         status_code=503,
+#         content={"detail": f"Database error: {str(exc)}"},
+#     )
 
 
 @app.exception_handler(Exception)
@@ -65,10 +63,8 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 app.include_router(health.router, prefix="/api")
-app.include_router(types.router, prefix="/api")
 app.include_router(discovery.router, prefix="/api")
 app.include_router(detail.router, prefix="/api")
-app.include_router(save.router, prefix="/api")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8070, reload=True)

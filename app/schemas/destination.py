@@ -14,8 +14,6 @@ class DiscoveryItem(BaseModel):
 
 class DetailItem(BaseModel):
     name: str
-    latitude: str
-    longitude: str
     short_description: str
     long_description: str
     interesting_facts: list[str]

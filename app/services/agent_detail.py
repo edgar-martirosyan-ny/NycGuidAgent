@@ -16,8 +16,6 @@ Return ONLY a valid JSON object with no prose, no markdown fences, no extra text
 
 The JSON object must have these exact fields:
 - name (string — the exact destination name)
-- latitude (string — precise coordinates)
-- longitude (string — precise coordinates)
 - short_description (string — 2 sentences introducing the destination as a tourism guide)
 - long_description (string — 3 to 4 paragraphs written as a tourism app audio script, vivid and engaging)
 - interesting_facts (array of exactly 10 strings — unique, specific, and engaging facts about the destination)"""

@@ -5,7 +5,7 @@ import anthropic
 from fastapi import HTTPException
 from app.config import settings
 from app.schemas.destination import DiscoveryItem, DiscoverRequest
-from app.tools.destination_tool import GET_EXISTING_DESTINATIONS_TOOL, handle_tool_call
+from app.tools.destination_tool import GET_EXISTING_DESTINATIONS_TOOL, GEOCODE_TOOL, handle_tool_call
 from app.services.pexels_service import fetch_image_url
 
 logger = logging.getLogger(__name__)
@@ -21,16 +21,17 @@ the expectation is that you will be returning next post popular destinations tha
 
 When asked to find destinations in a city:
 1. You MUST first call the `get_existing_destinations` tool with the provided city_id to retrieve destinations already saved for that city.
-2. Suggest exactly 5 NEW destinations that are NOT in the existing list.
-3. Never repeat destinations provided in the user's "already seen" list.
-4. Return ONLY a valid JSON array with no prose, no markdown fences, no extra text.
+2. Decide on exactly 5 NEW destinations that are NOT in the existing list.
+3. Call `get_coordinates` ONCE with all 5 destination names concatenated with the city (e.g. "Central Park, New York") to get their coordinates in a single call.
+4. Never repeat destinations provided in the user's "already seen" list.
+5. Return ONLY a valid JSON array with no prose, no markdown fences, no extra text.
 
 Each item in the array must have these exact fields:
 - name (string)
 - short_description (string, 2 sentences)
 - wikipedia_url (string — the full Wikipedia article URL for this destination, e.g. https://en.wikipedia.org/wiki/Statue_of_Liberty)
-- latitude (string)
-- longitude (string)
+- latitude (string — from get_coordinates result)
+- longitude (string — from get_coordinates result)
 - interesting_facts (array of 3 strings)
 - priority(number in range of 1 - 10 of how populare destination is)
 """
@@ -66,7 +67,7 @@ def run_discovery_agent(request: DiscoverRequest) -> list[DiscoveryItem]:
                 model="claude-haiku-4-5-20251001",
                 max_tokens=4096,
                 system=SYSTEM_PROMPT,
-                tools=[GET_EXISTING_DESTINATIONS_TOOL],  # type: ignore[list-item]
+                tools=[GET_EXISTING_DESTINATIONS_TOOL, GEOCODE_TOOL],  # type: ignore[list-item]
                 messages=messages,
             )
 
