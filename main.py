@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # from app.database import engine
-from app.api import health, discovery, detail
+from app.api import health, discover_destinations
 from app.config import settings
 
 logging.basicConfig(
@@ -63,8 +63,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 app.include_router(health.router, prefix="/api")
-app.include_router(discovery.router, prefix="/api")
-app.include_router(detail.router, prefix="/api")
+app.include_router(discover_destinations.router, prefix="/api")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8070, reload=True)
